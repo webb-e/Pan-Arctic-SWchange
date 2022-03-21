@@ -1,0 +1,46 @@
+// #############################################################################
+// ### BEFORE RUNNING THIS CODE, FIRST CREATE TWO IMAGE COLLECTIONS. 
+// ###    IN THE FIRST, EACH IMAGE IS THE DOY OF THE FIRST DAY WITHOUT SNOW (MELTOUT IN THE SPRING) IN A GIVEN YEAR. 
+// ###    IN THE SECOND, EACH IMAGE IS THE LAST DAY WITH SNOW (SNOW-ON IN THE FALL) IN A GIVEN EYAR
+// ### CODE FOR CREATING THESE IMAGES CAN BE FOUND IN THIS TUTORIAL:
+// ###      https://developers.google.com/earth-engine/tutorials/community/identifying-first-day-no-snow
+// ### CODE BELOW TAKES THOSE IMAGE COLLECTIONS (ONE AT A TIME) AND MAKES AN ASSET OF THE 
+// ###    SEN'S SLOPE OF SNOWMELT/SNOW-ON OVER THE PERIOD (CHANGE OVER TIME)
+// ### IMAGE COLLECTIONS BELOW SHOULD BE PUBLIC
+// #############################################################################
+// ### THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###   https://code.earthengine.google.com/cc0858d4cb1748df76effaea898399bd
+// #############################################################################
+
+// import image collections
+var snowmeltIC = ee.ImageCollection("users/webbe/Surface_water/Snowmelt");
+var snowonsetIC = ee.ImageCollection("users/webbe/Surface_water/Snowonset");
+
+// define scale and geometry 
+
+var modisscale = ee.Number(463.3127165275);
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+var years = ee.List.sequence(2000,2021);
+
+
+//////////
+///Calculate Sen's slope
+//////////
+
+// just change 'snowmeltIC' to 'snowonsetIC' to get the trend in onsent instead of the trend in melt
+
+var snowmelt_sen =  snowmeltIC.select(['year', 'calDoy'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("snowmelt");
+
+//////////
+///Export
+//////////
+
+ Export.image.toDrive({
+  image: snowmelt_sen,
+  description: 'meltout',
+  region: arcticbounds,
+  maxPixels: 1e9})
+  
