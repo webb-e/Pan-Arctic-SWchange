@@ -1,0 +1,64 @@
+// #############################################################################
+// ### THIS CODE MAKES AN ASSET FROM THE TREND OF TOTAL SUMMERTIME (JUNE-SEPT) EVAPORATION 
+// ###      FROM 2000-2021
+// ### NOTE THAT THE ERA HOURLY DATA GIVES TOTAL_EVAPORATION IN ACCUMULATIONS PER DAY. 
+// ###      HOUR ZERO IS THE TOTAL  ACCUMULATION FROM THE PREVIOUS DAY.  
+// ###      SEE https://confluence.ecmwf.int/display/CUSF/Total+Precipitation+%5BValues+not+in+range%5D+-+ERA5-Land+hourly+data+from+1981+to+present?desktop=true&macroName=view-file
+// ###      HERE I USE THE HOURLY DATA, AND FILTER TO ONLY SEE DAILY ACCUMULATIONS 
+// ### THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###      GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###     https://code.earthengine.google.com/484225344a899cad792b4a0fb2ffa835
+// #############################################################################
+
+//////////
+///define variables
+//////////
+
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+
+var years = ee.List.sequence(2000,2021);
+
+var meltdata = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+                .filter(ee.Filter.calendarRange(2000,2021,'year'))// only years 2000-2020
+                .filter(ee.Filter.calendarRange(6,9,'month'))// only June-Sept
+                .filter(ee.Filter.calendarRange(0,0,'hour')); // only 0th hr (this is the daily accumulated total)
+
+//////////
+/// take hourly data from the entire year and average it
+//////////
+
+var evap_list = years.map(function(i){
+                var arctic =  meltdata
+                              .filter(ee.Filter.calendarRange(i,i,'year')) // only per year
+                              .map(function(img) { 
+                                      var arcticmelt = img.select("total_evaporation")
+                                                      .updateMask(projectmask)
+                                                      .updateMask(fire.unmask().not())
+                                      return arcticmelt ; })    
+
+                var pixelsum = arctic.reduce(ee.Reducer.sum())
+                var year = ee.Number(i)
+                var constant = ee.Image.constant(year).rename("year").cast({'year': 'long'})
+              return pixelsum.addBands(constant) 
+              });
+              
+var evaporation = ee.ImageCollection(evap_list);
+
+//////////
+///Calculate Sen's slope
+//////////
+var evap_sen =  evaporation.select(['year', 'total_evaporation_sum'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("evap")
+
+                  
+ 
+//////////
+///Export
+//////////
+Export.image.toAsset({
+  image: evap_sen,
+  description: 'evap',
+  assetId: 'Evap',
+  region: arcticbounds,
+  maxPixels: 1e9})
