@@ -1,0 +1,81 @@
+// #############################################################################
+// ### THIS CODE MAKES AN ASSET FROM THE TREND OF MEAN  TEMPERATURE
+// ###   FROM 2000-2020 FOR FOUR TIME PERIODS: 
+// ###   WINTER(DECEMBER,JANUARY,FEBRUARY), SPRING (MARCH, APRIL, MAY)
+// ###   SUMMER (JUNE, JULY, AUGUST), FALL (SEPTEMBER, OCTOBER, NOVEMBER)
+// #############################################################################
+// ###  THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###   https://code.earthengine.google.com/d550a3ed49aa19865fc79b89166f2929
+// #############################################################################
+
+//////////
+///define variables
+//////////
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+
+var years = ee.List.sequence(1999,2020);
+
+var tempdata = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+
+//////////
+/// take hourly data from the entire year and average it
+//////////
+
+/// this example is for the winter; see notes in the function about switching to different seasons
+
+var temp_list = years.map(function(i){
+              var start = ee.Date.fromYMD(i,12,1);
+                 // for winter_temp, need to have the daterange span years, so
+               // first define the subsequent year 
+              var diffyear = ee.Number(i).add(1)
+              // for winter temp, put 'diffyear' here
+              // for spring, summer, and fall, put 'i here'
+              var end = ee.Date.fromYMD(diffyear,2,30);
+
+               var date_range = ee.DateRange(start,end);
+                var arctic =  tempdata.filterDate(date_range).map(function(img) { 
+                              var arctictemp = img.select("temperature_2m").clip(arcticbounds).subtract(273.15)
+                              return arctictemp ; })    
+
+                var pixelmean = arctic.reduce(ee.Reducer.mean())
+                var year = ee.Number(i)
+                var constant = ee.Image.constant(year).rename("year").cast({'year': 'long'})
+              return pixelmean.addBands(constant) 
+              });
+              
+var templist = ee.ImageCollection(temp_list);
+
+
+
+//////////
+///Calculate Sen's slope
+//////////
+var sen =  templist.select(['year', 'temperature_2m_mean'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("longwintertemp");
+                  
+//////////
+///Visualize
+//////////
+
+print(sen)
+var palettes = require('users/gena/packages:palettes');
+
+var viz = {min:-101, max:10, palette:palettes.misc.parula[7]};
+
+Map.addLayer(sen.first().select("temperature_2m_mean"), viz)
+
+  
+ 
+//////////
+///Export
+//////////
+ Export.image.toAsset({
+  image: sen,
+  description: 'wintertemp_trend',
+  assetId: 'wintertemp_trend',
+  scale: 463.3127165275,
+  region: arcticbounds,
+  maxPixels: 1e9})
+
