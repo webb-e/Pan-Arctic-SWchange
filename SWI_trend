@@ -1,0 +1,104 @@
+//////////
+///THIS CODE CREATES AN IMAGE OF THE TREND IN THE AVERAGE JULY SUPERFINE WATER INDEX (SWI) 
+//  FROM 2000-2021 AT EACH MODIS PIXEL
+// TREND MEANS THE SEN'S SLOPE OF THE SWI VS. YEAR
+//
+// OBSERVATIONS WITH ANY SNOW ARE EXCLUDED FROM ANALYSIS
+// 
+// THE FOLLOWING PIXELS ARE EXCLUDED FROM ANALYSIS 
+//  (PROJECT MASK)
+//      (1) PIXELS WITHIN 5KM OF THE COAST 
+//      (2) PIXELS NOT IN THE CONTINUOUS OR DISCONTINUOUS PERMAFROST ZONES
+//      (3) PIXELS LABELED AS PERMANENET SNOW AND ICE OR AGRICULTURAL OR URBAN LAND
+//  (FIRE MASK)
+//      (3) PIXELS WITH A FIRE HISTORY
+//  (LAKE MASK)
+//      (4) PIXELS WITH LAKE DENSITY <5%
+//
+//////////
+// #############################################################################
+// ### THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###   https://code.earthengine.google.com/67b58c3c941961c55cd22f7f4afea3e1
+// #############################################################################
+
+//////////
+///input masks 
+//////////
+
+var projectmask = ee.Image("users/webbe/Surface_water/SW_project_mask"),
+    lakemask = ee.Image("users/webbe/Surface_water/BAWLD_Image_lake"),
+    firemask = ee.Image("users/webbe/Surface_water/RecentFire_Jan22");
+
+//////////
+///define variables
+//////////
+var modisscale = ee.ImageCollection("MODIS/006/MCD43A4").select("Nadir_Reflectance_Band1").first().projection().nominalScale()           
+
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+
+var years = ee.List.sequence(2000,2021);
+
+
+//////////
+/// get SWI of each pixel for each year, add to image collection
+//////////
+var SWI_list = years.map(function(i){
+                var start = ee.Date.fromYMD(i,7,1);
+                var end = ee.Date.fromYMD(i,7,31);
+                var date_range = ee.DateRange(start,end);
+                var snowcover =  ee.ImageCollection("MODIS/006/MOD10A1") 
+                                .filterDate(date_range)
+                                .select("NDSI_Snow_Cover")
+                var reflbands =  ee.ImageCollection("MODIS/006/MCD43A4")
+                                .select(["Nadir_Reflectance_Band1", "Nadir_Reflectance_Band2",
+                                 "Nadir_Reflectance_Band4", "Nadir_Reflectance_Band3"])
+                                 .filterDate(date_range);
+                var arcticrefl = reflbands.map(function(img) { 
+                                    return img.clip(arcticbounds).multiply(0.0001); 
+                                        })    
+                var swipixel = arcticrefl.map(function(image){
+                                  var hsv = image.select(['Nadir_Reflectance_Band1','Nadir_Reflectance_Band4', 
+                                             'Nadir_Reflectance_Band3']).rgbToHsv();
+                                  var nir7 = image.select('Nadir_Reflectance_Band2').multiply(ee.Number(7))
+                                  var minus = hsv.select('saturation').subtract(nir7)
+                                  var plus = hsv.select('saturation').add(nir7)
+                                  var band1 = image.select("Nadir_Reflectance_Band1")
+                                  return minus.divide(plus)
+                                  })
+                var snowswi = swipixel.combine(snowcover)
+                var nosnowswi = snowswi.map (function(image) {
+                                      return image.updateMask(image.select("NDSI_Snow_Cover").eq(0))})
+                var swipixelmean = nosnowswi.reduce(ee.Reducer.mean())
+                                   .reproject("SR-ORG:6974", null, modisscale)
+                var year = ee.Number(i)
+                var constant = ee.Image.constant(year).rename("year").cast({'year': 'long'})
+                              .reproject("SR-ORG:6974", null, modisscale)
+                var swimasked = swipixelmean.updateMask(projectmask).updateMask(firemask.unmask().not())
+                                  .updateMask(lakemask.select('lakiness').gte(5))
+                                  
+                return swimasked.addBands(constant)                   
+              });
+      
+var swi = ee.ImageCollection(SWI_list);
+
+//////////
+///Calculate Sen's slope
+//////////
+var swi_sen =  swi.select(['year', 'saturation_mean'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("SWI")
+                           .reproject("SR-ORG:6974", null, modisscale);
+
+//////////
+///Export image
+//////////
+
+Export.image.toDrive({
+  image: swi_sen,
+  folder: 'Archived',
+  description: 'SWI_trend',
+  scale: 463.3127165275,
+  region: arcticbounds,
+  maxPixels:1e12
+});
