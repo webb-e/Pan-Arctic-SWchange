@@ -9,6 +9,7 @@ Most of the files here are written in Java Script to be executed in the Google E
 
 The file called SW_archived.ipnyb is the code used to run the machine learning analysis that identified the drivers of surface water change. The file SW_dataset.csv is the pixel-wise 12km data (surface water trends, climate trends, landscape variables, etc.) used in analysis. 
 
+#################################################
 SWI citation: Sharma, R. C., Tateishi, R., Hara, K. & Nguyen, L. V. Developing Superfine Water Index (SWI) for global water cover mapping using MODIS data. Remote Sensing 7, 13807–13841 (2015).
 
 ERA-5 Land hourly citation: Muñoz Sabater, J. ERA5-Land hourly data from 1981 to present. (2019) doi:doi:10.24381/cds.e2161bac
