@@ -7,7 +7,7 @@
 // ###      HERE I USE THE HOURLY DATA, AND FILTER TO ONLY SEE DAILY ACCUMULATIONS 
 // ### THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
 // ###      GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
-// ###     https://code.earthengine.google.com/484225344a899cad792b4a0fb2ffa835
+// ###     https://code.earthengine.google.com/f55b200a68f0db145c3c92c2cba175c5
 // #############################################################################
 
 //////////
@@ -31,10 +31,8 @@ var evap_list = years.map(function(i){
                 var arctic =  meltdata
                               .filter(ee.Filter.calendarRange(i,i,'year')) // only per year
                               .map(function(img) { 
-                                      var arcticmelt = img.select("total_evaporation")
-                                                      .updateMask(projectmask)
-                                                      .updateMask(fire.unmask().not())
-                                      return arcticmelt ; })    
+                                      var arcticevap = img.select("total_evaporation")
+                                      return arcticevap ; })    
 
                 var pixelsum = arctic.reduce(ee.Reducer.sum())
                 var year = ee.Number(i)
