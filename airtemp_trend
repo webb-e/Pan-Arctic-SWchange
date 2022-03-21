@@ -1,0 +1,62 @@
+// #############################################################################
+// ### THIS CODE MAKES AN ASSET FROM THE TREND OF MEAN ANNUAL TEMPERATURE
+// ###   FROM 2000-2021. THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###   https://code.earthengine.google.com/a428d58c44f7a3836dcb370efc0f8717
+// #############################################################################
+
+//////////
+///define variables
+//////////
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+
+var years = ee.List.sequence(2000,2021);
+var tempdata = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+
+//////////
+/// take hourly data from the entire year and average it
+//////////
+
+var temp_list = years.map(function(i){
+               var start = ee.Date.fromYMD(i,1,1);
+               var end = ee.Date.fromYMD(i,12,30);
+               var date_range = ee.DateRange(start,end);
+                var arctic =  tempdata.filterDate(date_range).map(function(img) { 
+                              var arctictemp = img.select("temperature_2m").clip(arcticbounds).subtract(273.15)
+                              return arctictemp ; })    
+
+                var pixelmean = arctic.reduce(ee.Reducer.mean())
+                var year = ee.Number(i)
+                var constant = ee.Image.constant(year).rename("year").cast({'year': 'long'})
+              return pixelmean.addBands(constant) 
+              });
+              
+var annualtemp = ee.ImageCollection(temp_list);
+
+//////////
+///Calculate Sen's slope
+//////////
+var sen =  annualtemp.select(['year', 'temperature_2m_mean'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("annualtemp");                 
+//////////
+///Visualize
+//////////
+
+var palettes = require('users/gena/packages:palettes');
+
+var viz = {min:-101, max:10, palette:palettes.misc.parula[7]};
+
+Map.addLayer(annualtemp.first().select("temperature_2m_mean"), viz)
+
+
+//////////
+///Export
+//////////
+Export.image.toAsset({
+  image: sen,
+  description: 'annualtemp21',
+  assetId: 'annualtemp_21yrs',
+  scale: 463.3127165275,
+  region: arcticbounds,
+  maxPixels: 1e9})
