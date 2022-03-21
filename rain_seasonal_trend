@@ -1,0 +1,72 @@
+// #############################################################################
+// ### THIS CODE MAKES AN ASSET FROM THE TREND IN  SEASONAL RAINFALL FROM 2000-2021
+// ###   NOTE THAT IN ERA5, 'TOTAL' PRECIPITATION INCLUDES SNOW AND RAIN, SO
+// ###    NEED TO SUBTRACT SNOWFALL FROM TOTAL PRECIP TO GET RAIN
+// ###  WE USE THE FOLLOING DEFINITIONS:
+// ###    SPRING (MARCH, APRIL, MAY)
+// ###    SUMMER (JUNE, JULY, AUGUST), 
+// ###    FALL (SEPTEMBER, OCTOBER, NOVEMBER)
+// ### 
+// ### THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###   https://code.earthengine.google.com/2d6f5769a82fc2d78bd3670780940480
+// #############################################################################
+// #############################################################################
+
+// only run for spring, summer, and fall (assume no rain in winter)
+
+//////////
+///define variables
+//////////
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+
+var years = ee.List.sequence(2000,2021);
+
+var precipdata = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+                .filter(ee.Filter.calendarRange(2000,2021,'year'))// only years 2000-2020
+                .filter(ee.Filter.calendarRange(3,5,'month'))// choose months
+                .filter(ee.Filter.calendarRange(0,0,'hour')) // only 0th hr (this is the daily accumulated total)
+                .filterBounds(arcticbounds);
+
+
+var scale = precipdata.first().projection().nominalScale()
+//////////
+/// take hourly data from the entire year and average it
+//////////
+
+var rain_list = years.map(function(i){
+                var arctic =  precipdata
+                              .filter(ee.Filter.calendarRange(i,i,'year')) // only per year
+                              .map(function(img) { 
+                                      var snowfall = img.select("snowfall")
+                                      var total = img.select("total_precipitation")
+                                      var rain = total.subtract(snowfall)
+                                      return rain})    
+
+                var pixelsum = arctic.reduce(ee.Reducer.sum())
+                var year = ee.Number(i)
+                var constant = ee.Image.constant(year).rename("year").cast({'year': 'long'})
+              return pixelsum.addBands(constant) 
+              });
+              
+var total_rain = ee.ImageCollection(rain_list);
+
+//////////
+///Calculate Sen's slope
+//////////
+var rain_sen =  total_rain.select(['year', 'total_precipitation_sum'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("rain")
+
+
+//////////
+///Export
+//////////
+Export.image.toAsset({
+  image: rain_sen,
+  description: 'rain_spring',
+  assetId: 'springrain',
+   region: arcticbounds,
+  maxPixels: 1e9})
+
+
