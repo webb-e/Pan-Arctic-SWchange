@@ -7,7 +7,7 @@ Yearly July surface water datasets and the trend in July surface water is availa
 
 Most of the files here are written in Java Script to be executed in the Google Earth Engine web interface. They calculate the trend in climate variables over time or the trend in surface water (as measured by the Superfine Water Index; SWI) over time. Here, trend is defined as the Sen's slope of the variable regressed against year (2000-2021). Climate variables are calculated over the entire pan-Arctic (land north of 50N) and the surface water index is calculated only in the study region of the Webb et al., paper (see code or the paper for details on the study region). The climate variables are taken from the ERA5-land-hourly dataset and the SWI is calculated from MODIS NBAR reflectance data.
 
-The file called SW_archived.ipnyb is the code used to run the machine learning analysis that identified the drivers of surface water change. The file SW_dataset.csv is the pixel-wise 12km data (surface water trends, climate trends, landscape variables, etc.) used in analysis. 
+The file called SW_archived.ipnyb is the code used to run the machine learning analysis that identified the drivers of surface water change. The pixel-wise 12km data (surface water trends, climate trends, landscape variables, etc.) used in analysis is too large to be stored on github but is available [here](https://drive.google.com/file/d/1YaD_XyPhJl4qHxpCQSN6ynOROga5QsTD/view?usp=sharing). 
 
 #################################################
 
