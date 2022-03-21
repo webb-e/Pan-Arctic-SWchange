@@ -1,0 +1,64 @@
+// #############################################################################
+// ### THIS CODE MAKES AN ASSET FROM THE TREND OF SNOWMELT OVER A 21 YR PERIOD (2000-2021)
+// ###   NOTE THAT THE ERA MONTHLY DATA GIVES MELTOUT IN AVERAGE METERS OF SNOWMELT PER DAY
+// ###   THE HOURLY DATA GIVES MELTOUT IN ACCUMULATIONS PER DAY. HOUR ZERO IS THE TOTAL  
+// ###   ACCUMULATION FROM THE PREVIOUS DAY.  
+// ### SEE https://confluence.ecmwf.int/display/CUSF/Total+Precipitation+%5BValues+not+in+range%5D+-+ERA5-Land+hourly+data+from+1981+to+present?desktop=true&macroName=view-file
+// ###   HERE I USE THE HOURLY DATA, AND FILTER TO ONLY SEE DAILY ACCUMULATIONS 
+// #############################################################################
+// ### THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
+// ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
+// ###   https://code.earthengine.google.com/2d150bbc083ea37a9ab567a7c1226a8f
+// #############################################################################
+
+//////////
+///define variables
+//////////
+var arcticbounds = ee.Geometry.Rectangle([180,50,-180,80],null,false);
+
+var years = ee.List.sequence(2000,2021);
+
+var meltdata = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
+                .filter(ee.Filter.calendarRange(2000,2021,'year'))// only years 2000-2021
+                .filter(ee.Filter.calendarRange(1,7,'month'))// only Jan-July
+                .filter(ee.Filter.calendarRange(0,0,'hour')); // only 0th hr (this is the daily accumulated total)
+
+//////////
+/// take hourly data from the entire year and average it
+//////////
+
+var melt_list = years.map(function(i){
+                var arctic =  meltdata
+                              .filter(ee.Filter.calendarRange(i,i,'year')) // only per year
+                              .map(function(img) { 
+                                      var arcticmelt = img.select("snowmelt")
+                                                      .clip(arcticbounds)
+                                      return arcticmelt ; })    
+
+                var pixelsum = arctic.reduce(ee.Reducer.sum())
+                var year = ee.Number(i)
+                var constant = ee.Image.constant(year).rename("year").cast({'year': 'long'})
+              return pixelsum.addBands(constant) 
+              });
+              
+var totalmelt = ee.ImageCollection(melt_list);
+
+//////////
+///Calculate Sen's slope
+//////////
+var melt_sen =  totalmelt.select(['year', 'snowmelt_sum'])
+                           .reduce(ee.Reducer.sensSlope())
+                           .select("slope").rename("meltwater");
+                  
+ 
+ 
+//////////
+///Export
+//////////
+ Export.image.toDrive({
+  image: melt_sen,
+  description: 'meltwater',
+  region: arcticbounds,
+  maxPixels: 1e9})
+  
+  
