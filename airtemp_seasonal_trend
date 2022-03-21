@@ -6,7 +6,7 @@
 // #############################################################################
 // ###  THIS IS WRITTEN IN JAVA SCRIPT TO BE RUN IN THE 
 // ###   GOOGLE EARTH ENGINE WEB APPLICATION. YOU CAN ACCESS DIRECTLY HERE:
-// ###   https://code.earthengine.google.com/d550a3ed49aa19865fc79b89166f2929
+// ###   https://code.earthengine.google.com/dd67073c7b5b04b94ce1bf4b26fd2379
 // #############################################################################
 
 //////////
@@ -75,7 +75,6 @@ Map.addLayer(sen.first().select("temperature_2m_mean"), viz)
   image: sen,
   description: 'wintertemp_trend',
   assetId: 'wintertemp_trend',
-  scale: 463.3127165275,
   region: arcticbounds,
   maxPixels: 1e9})
 
