@@ -1,7 +1,7 @@
 # Pan-Arctic-SWchange
 Code used to analyze pan-Arctic surface water trends 
 
-This is the companion code to [MANUSCRIPT CITAITON]
+This is the companion code to Webb, E.E., Liljedahl, A.K., Cordeiro, J.A., Loranty, M.M., Witharana, C., and Lichstein, J.W. Permafrost thaw drives surface water decline across lake-rich regions of the Arctic. Nature Climate Change. 2022
 
 Yearly July surface water datasets and the trend in July surface water is available here [ARCTIC DATA CENTER CITATION]
 
