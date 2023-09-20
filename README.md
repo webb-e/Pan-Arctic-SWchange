@@ -4,7 +4,7 @@ Code used to analyze pan-Arctic surface water trends
 This is the companion code to:
 Webb, E.E., Liljedahl, A.K., Cordeiro, J.A. et al. Permafrost thaw drives surface water decline across lake-rich regions of the Arctic. Nat. Clim. Chang. 12, 841–846 (2022). https://doi.org/10.1038/s41558-022-01455-w
 
-Yearly July surface water datasets and the trend in July surface water is available here https://arcticdata.io/catalog/view/doi:10.18739/A2BK16R0V
+Yearly July surface water datasets and the trend in July surface water is available here https://arcticdata.io/catalog/view/doi%3A10.18739%2FA2NK3665N
 
 Most of the files here are written in Java Script to be executed in the Google Earth Engine web interface. They calculate the trend in climate variables over time or the trend in surface water (as measured by the Superfine Water Index; SWI) over time. Here, trend is defined as the Sen's slope of the variable regressed against year (2000-2021). Climate variables are calculated over the entire pan-Arctic (land north of 50N) and the surface water index is calculated only in the study region of the Webb et al., paper (see code or the paper for details on the study region). The climate variables are taken from the ERA5-land-hourly dataset and the SWI is calculated from MODIS NBAR reflectance data.
 
